@@ -5,6 +5,9 @@ name: Публикация сайта
 on:
   push:
     branches: [main]
+  # на пул-реквестах гоняем только проверки, без публикации
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -23,11 +26,11 @@ jobs:
     name: Проверки
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: lts/*
 
       - name: Автотесты
         run: |
@@ -59,14 +62,15 @@ jobs:
   deploy:
     name: Деплой на Pages
     needs: checks
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
       - name: Собрать публикуемый каталог
         # На сайт едет весь репозиторий, кроме исходников и служебного:
@@ -88,9 +92,9 @@ jobs:
           echo "Файлов на публикацию: $(find _site -type f | wc -l)"
           du -sh _site
 
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
