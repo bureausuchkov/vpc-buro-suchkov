@@ -46,9 +46,11 @@ jobs:
 
       - name: Обязательные файлы на месте
         run: |
-          for f in index.html CNAME .nojekyll; do
+          for f in index.html CNAME; do
             [ -s "$f" ] || { echo "Нет или пустой: $f"; exit 1; }
           done
+          # .nojekyll пустой по своей природе — проверяем только наличие
+          [ -f .nojekyll ] || { echo "Нет: .nojekyll"; exit 1; }
           # домен не должен разъезжаться с настройками Pages
           grep -qx 'marketing.bureausuchkov.com' CNAME
 
