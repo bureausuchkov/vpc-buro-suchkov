@@ -1,0 +1,102 @@
+name: Публикация сайта
+
+# Деплой marketing.bureausuchkov.com: любой пуш в main проходит проверки
+# и уезжает на GitHub Pages. Руками запускается кнопкой Run workflow.
+on:
+  push:
+    branches: [main]
+  # на пул-реквестах гоняем только проверки, без публикации
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Публикуем по одному прогону за раз, но очередь не отменяем:
+# каждый пуш в main должен доехать до сайта.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    name: Проверки
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Автотесты
+        run: |
+          mapfile -t tests < <(find . -name '*.test.js' -not -path './node_modules/*' | sort)
+          if [ ${#tests[@]} -eq 0 ]; then
+            echo "Автотестов не найдено"
+            exit 0
+          fi
+          for t in "${tests[@]}"; do
+            echo "→ $t"
+            node "$t"
+          done
+
+      - name: Обязательные файлы на месте
+        run: |
+          for f in index.html CNAME; do
+            [ -s "$f" ] || { echo "Нет или пустой: $f"; exit 1; }
+          done
+          # .nojekyll пустой по своей природе — проверяем только наличие
+          [ -f .nojekyll ] || { echo "Нет: .nojekyll"; exit 1; }
+          # домен не должен разъезжаться с настройками Pages
+          grep -qx 'marketing.bureausuchkov.com' CNAME
+
+      - name: Нет следов незавершённого мержа
+        run: |
+          if grep -rlE '^(<{7}|={7}|>{7})( |$)' --include='*.html' --include='*.md' .; then
+            echo "В файлах остались маркеры конфликта"
+            exit 1
+          fi
+
+  deploy:
+    name: Деплой на Pages
+    needs: checks
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/configure-pages@v6
+
+      - name: Собрать публикуемый каталог
+        # На сайт едет весь репозиторий, кроме исходников и служебного:
+        # _src-promo — исходники ролика (шрифты и Motion, ~600 КБ),
+        # готовый leads/diagnostika-promo.html лежит в репозитории уже собранным.
+        run: |
+          mkdir -p _site
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '.gitignore' \
+            --exclude '.github/' \
+            --exclude '.claude/' \
+            --exclude '_site/' \
+            --exclude '_src-promo/' \
+            --exclude '*.test.js' \
+            --exclude '*.command' \
+            --exclude '.DS_Store' \
+            ./ _site/
+          echo "Файлов на публикацию: $(find _site -type f | wc -l)"
+          du -sh _site
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v5
