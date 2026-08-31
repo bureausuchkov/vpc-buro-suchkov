@@ -1,4 +1,6 @@
-<!doctype html><!-- копия Инструменты/Калькулятор_менеджера.html + пин-оверлей; правки вносить в оригинал -->
+<!doctype html><!-- копия Инструменты/Калькулятор_менеджера.html + пин-оверлей; правки вносить в оригинал.
+     Сознательное расхождение: блок пресетов цен продуктов (#solRow, секция 04) есть только в оригинале —
+     прайс Бюро наружу не публикуем. JS одинаковый в обоих файлах, работа с #solRow под guard'ом. -->
 <html lang="ru">
 <head>
 <meta charset="utf-8">
@@ -304,6 +306,32 @@ footer b{color:var(--gray-dark);font-weight:600}
         </div>
       </section>
 
+      <!-- секция 4 -->
+      <section class="section">
+        <div class="sec-h"><span class="num">04</span><h2>маркетинговый бюджет девелопера</h2></div>
+        <div class="sec-d">сколько у клиента вообще денег на маркетинг при его выручке — и какую долю из них занимает наше решение. взгляд сверху, от норматива рынка; секция 02 считает то же снизу, от цели по броням.</div>
+        <div class="calc">
+          <div class="panel">
+            <div class="presets modeswitch seg" id="locRow" role="group" aria-label="локация проекта">
+              <button data-loc="mimo" aria-pressed="true">мск и мо</button>
+              <button data-loc="spb" aria-pressed="false">спб и ло</button>
+              <button data-loc="reg" aria-pressed="false">регионы</button>
+            </div>
+            <div class="fld"><label for="mkt">доля маркетинга в выручке</label><div class="inp"><input id="mkt" inputmode="decimal" placeholder=""><span class="u">%</span></div><div class="hint"><b id="hMkt"></b><br><span id="hMkt2"></span></div></div>
+          </div>
+          <div class="res" aria-live="polite">
+            <h3>сколько у них на маркетинг</h3>
+            <div class="big"><div class="l">бюджет на маркетинг проекта</div><div class="v" id="s4bud">—</div><div class="s" id="s4budF"></div></div>
+            <div class="rgrid">
+              <div class="rc"><div class="l">в год</div><div class="v" id="s4y">—</div><div class="s" id="s4yF"></div></div>
+              <div class="rc"><div class="l">в месяц</div><div class="v" id="s4m">—</div><div class="s" id="s4mF"></div></div>
+              <div class="rc"><div class="l">на один лот</div><div class="v" id="s4lot">—</div><div class="s" id="s4lotF"></div></div>
+            </div>
+            <div class="box cmp" id="s4sol"></div>
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <!-- панель аргументов -->
@@ -317,6 +345,7 @@ footer b{color:var(--gray-dark);font-weight:600}
           <div class="argrow off" id="pOwn1" data-sec="01"><p class="txt"></p><button class="cp" type="button">копир.</button></div>
           <div class="argrow off" id="pOwn2" data-sec="03"><p class="txt"></p><button class="cp" type="button">копир.</button></div>
           <div class="argrow off" id="pOwn3" data-sec="03"><p class="txt"></p><button class="cp" type="button">копир.</button></div>
+          <div class="argrow off" id="pOwn4" data-sec="04"><p class="txt"></p><button class="cp" type="button">копир.</button></div>
         </div>
         <div class="arggrp">
           <div class="cap">коммерческому директору</div>
@@ -326,6 +355,7 @@ footer b{color:var(--gray-dark);font-weight:600}
         <div class="arggrp">
           <div class="cap">маркетингу</div>
           <div class="argrow off" id="pMkt1" data-sec="02"><p class="txt"></p><button class="cp" type="button">копир.</button></div>
+          <div class="argrow off" id="pMkt2" data-sec="04"><p class="txt"></p><button class="cp" type="button">копир.</button></div>
         </div>
       </div>
 
@@ -365,8 +395,20 @@ var BENCH = {
 };
 var FIX = {start:15, rate:14}; // фиксированные дефолты (не зависят от класса)
 
-var state = {cls:'econom', mode:'A'};
-var INPUTS = ['chk','lots','hor','start','tgt','c1','c2','cpl','m2g','was','drop','plan','fact','rate','sol'];
+// ДРР по классам и локациям — измерение Smartis: Игорь Балашов, «Бенчмарки рынка недвижимости»,
+// форум «Движение», июнь 2026; данные 2026 кв1, все каналы за вычетом брокерских расходов и выручки.
+// Это рекламный бюджет БЕЗ агентских комиссий, ФОТ и офиса продаж.
+// Премиум измерен только по Москве и МО — в СПб (9 ЖК) и регионах (3 ЖК) выборка мала, показываем московский ориентир.
+var MKT = {
+  econom:  {mimo:2.2, spb:3.4, reg:4.3},
+  comfort: {mimo:2.2, spb:3.4, reg:4.3},
+  business:{mimo:3.6, spb:2.5, reg:5.0},
+  premium: {mimo:3.8, spb:3.8, reg:3.8, thin:true}
+};
+var LOC = {mimo:'Москва и МО', spb:'СПб и ЛО', reg:'регионы'};
+
+var state = {cls:'econom', mode:'A', loc:'mimo'};
+var INPUTS = ['chk','lots','hor','start','tgt','c1','c2','cpl','m2g','was','drop','plan','fact','rate','sol','mkt'];
 var $ = function(id){ return document.getElementById(id); };
 
 // ---- форматирование (ru) ----
@@ -391,6 +433,7 @@ function ph(id){ // числовой placeholder пустого поля для 
   if(id==='c1') return mid(B.conv1);
   if(id==='c2') return mid(B.conv2);
   if(id==='cpl') return mid(B.cpl);
+  if(id==='mkt') return MKT[state.cls][state.loc];
   if(id==='start') return FIX.start;
   if(id==='rate') return FIX.rate;
   return NaN;
@@ -494,6 +537,40 @@ function calc(){
     setTxt('s3payF', money(sol*1e6)+' ÷ цена дня');
   } else { setTxt('s3pay','—'); setTxt('s3payF', noLoss ? '' : 'укажите стоимость решения'); }
 
+  // === секция 4 ===
+  // бюджет считается от выручки всего проекта; год и месяц — через горизонт из секции 01
+  var mktP = eff('mkt');
+  var mktBud = revenue*mktP/100;
+  var mktY = mktBud/hor*12, mktM = mktBud/hor;
+  var mktLot = checkR*mktP/100;
+  var solR = sol*1e6;
+  setTxt('s4bud', money(mktBud));
+  if(isFinite(mktBud)){
+    setTxt('s4budF', money(revenue)+' × '+count(mktP)+'%' + (isFinite(drr) ? ' · по воронке из секции 02 выходит '+pct(drr) : ''));
+  } else $('s4budF').innerHTML = noChk ? '<button class="gochk" type="button">укажите средний чек в шапке ↑</button>' : 'нужны лоты и чек';
+  setTxt('s4y', money(mktY));
+  setTxt('s4yF', isFinite(mktY) ? money(mktBud)+' ÷ '+count(hor,0)+' мес × 12' : (isFinite(mktBud) ? 'нужен горизонт продаж' : ''));
+  setTxt('s4m', money(mktM));
+  setTxt('s4mF', isFinite(mktM) ? money(mktBud)+' ÷ '+count(hor,0)+' мес' : '');
+  setTxt('s4lot', money(mktLot));
+  setTxt('s4lotF', isFinite(mktLot) ? money(checkR)+' × '+count(mktP)+'%' : '');
+  var solRow = $('solRow');
+  if(solRow){
+    var solV = $('sol').value.trim().replace('.',',');
+    [].forEach.call(solRow.querySelectorAll('button'), function(b){ b.setAttribute('aria-pressed', b.dataset.sol===solV ? 'true' : 'false'); });
+  }
+  var solBox = $('s4sol');
+  if(isFinite(mktBud) && isFinite(solR) && solR>0){
+    var shY = solR/mktY*100, shP = solR/mktBud*100;
+    solBox.innerHTML = 'решение за <b>'+money(solR)+'</b> — это '
+      + (isFinite(shY) ? '<b>'+pct(shY)+'</b> годового маркетингового бюджета клиента и ' : '')
+      + '<b>'+pct(shP)+'</b> бюджета за весь проект.';
+  } else if(isFinite(mktBud)){
+    solBox.innerHTML = 'чтобы увидеть долю нашего решения в этом бюджете — <button class="gosol" type="button">укажите его стоимость в секции 03 ↑</button>';
+  } else {
+    solBox.textContent = 'заполните секцию 01 — бюджет считается от выручки проекта.';
+  }
+
   // === аргументы ===
   phrase('pOwn1', isFinite(revenue),
     'На кону проект на '+money(revenue)+' — при слабом старте под ударом не реклама, а вся финмодель.');
@@ -507,6 +584,11 @@ function calc(){
     'Ваш требуемый темп '+count(pace)+' '+nform(pace,'лот','лота','лотов')+'/мес; московский ориентир для класса «'+B.label+'» — '+rng(B.pace)+'; в регионах средний темп на проект — от ≈4 до ≈14 в зависимости от города (расчёт, май–июнь 2026).');
   phrase('pMkt1', isFinite(drr),
     'ДРР выходит '+pct(drr)+' при норме '+rng(B.drr)+'% для вашего класса.');
+  phrase('pOwn4', isFinite(mktBud),
+    'При выручке проекта '+money(revenue)+' рекламный бюджет по рынку — около '+money(mktBud)+' ('+count(mktP)+'% от выручки, замер по классу «'+B.label+'» и локации «'+LOC[state.loc]+'»)'
+      + (isFinite(mktY) ? ', это ≈ '+money(mktY)+' в год.' : '.'));
+  phrase('pMkt2', isFinite(mktY) && isFinite(solR) && solR>0,
+    'Решение за '+money(solR)+' — это '+pct(solR/mktY*100)+' вашего годового маркетингового бюджета.');
 
   syncURL();
 }
@@ -531,6 +613,11 @@ function refreshPlaceholders(){
   $('hC1').textContent = 'оценка бюро: '+rng(B.conv1)+'%';
   $('hC2').textContent = 'оценка бюро: '+rng(B.conv2)+'%';
   $('hCpl').textContent = (mk?'рынок, Q2 2026: ':'оценка бюро: ')+rng(B.cpl)+' тыс ₽';
+  var m = MKT[state.cls];
+  $('mkt').placeholder = count(m[state.loc]);
+  $('hMkt').textContent = 'замер Smartis, 2026 кв1: Москва и МО '+count(m.mimo)+'% · СПб и ЛО '+count(m.spb)+'% · регионы '+count(m.reg)+'%'
+    + (m.thin ? ' (премиум измерен только по Москве и МО)' : '');
+  $('hMkt2').textContent = 'это реклама без агентских: их платят сверху, ещё ≈2 п.п. от выручки';
 }
 
 // ---- URL-состояние ----
@@ -541,6 +628,7 @@ function syncURL(){
     var p = new URLSearchParams();
     if(state.cls!=='econom') p.set('cls', state.cls);
     if(state.mode!=='A') p.set('mode', state.mode);
+    if(state.loc!=='mimo') p.set('loc', state.loc);
     INPUTS.forEach(function(id){ var v=$(id).value.trim(); if(v!=='') p.set(id, v); });
     var s = p.toString();
     try{ history.replaceState(null,'', location.pathname + (s?'?'+s:'')); }catch(e){}
@@ -550,6 +638,7 @@ function applyQuery(){
   var q = new URLSearchParams(location.search);
   if(q.get('cls') && BENCH[q.get('cls')]) state.cls = q.get('cls');
   if(q.get('mode')==='B') state.mode = 'B';
+  if(q.get('loc') && LOC[q.get('loc')]) state.loc = q.get('loc');
   INPUTS.forEach(function(id){ if(q.has(id)) $(id).value = q.get(id); });
 }
 
@@ -564,6 +653,7 @@ function setMode(m){
   $('modeA').hidden = (m!=='A'); $('modeB').hidden = (m!=='B');
   calc();
 }
+function setLoc(l){ state.loc = l; pressRow('locRow','loc',l); refreshPlaceholders(); calc(); }
 
 // ---- копирование ----
 function copyText(text, btn){
@@ -584,18 +674,23 @@ function fallbackCopy(text, ok){
 // ---- init ----
 $('benchNote').innerHTML = '<b>Как считается.</b> Темп продаж — средний проект Москвы за I–II кв. 2026 (сделки сегмента ÷ число проектов; эконом/комфорт = масс-сегмент); лидеры рынка в 6–9 раз быстрее среднего. Готовых рейтингов темпа по регионам не существует — региональные ориентиры посчитаны тем же методом по 8 городам (сделки города ÷ активные ЖК, май–июнь 2026), см. козыри; темп на ЖК сильно зависит от среднего размера проекта в городе. '
   + 'CPL целевого лида для эконом/комфорт и премиума — рыночные данные 2026 года; конверсии, нормы ДРР и CPL бизнес-класса — экспертная оценка Бюро Сучкова (июль 2026). '
-  + 'Пустое поле считается по бенчмарку выбранного класса; введённое значение важнее и переживает смену класса.';
+  + 'Доля маркетинга в выручке (секция 04) — измерение Smartis по классам и локациям: Игорь Балашов, «Бенчмарки рынка недвижимости — как чувствует себя реклама застройщиков в 2025–2026», форум «Движение», июнь 2026 (данные 2026 кв1, линейка с post-view 90 дней, все каналы за вычетом брокерских расходов и выручки; премиум измерен только по Москве и МО). '
+  + 'Это рекламный бюджет — без агентских комиссий, ФОТ маркетинга и офиса продаж. Агентские идут сверх него: при ~65% сделок через агентов и комиссии 2,5–4% это ещё около 2 п.п. от выручки (Движение.ру, март 2026). Полный коммерческий бюджет проекта бывает и 9–10% дохода, но в него входят ипотечные субсидии и софинансирование первого взноса. '
+  + 'Пустое поле считается по бенчмарку выбранного класса; введённое значение важнее и переживает смену класса и локации.';
 
 applyQuery();
 pressRow('clsRow','cls',state.cls);
 refreshPlaceholders();
 $('modeA').hidden = (state.mode!=='A'); $('modeB').hidden = (state.mode!=='B');
 pressRow('modeRow','mode',state.mode);
+pressRow('locRow','loc',state.loc);
 
 INPUTS.forEach(function(id){ $(id).addEventListener('input', calc); $(id).setAttribute('autocomplete','off'); });
 [].forEach.call(document.querySelectorAll('.cp'),function(b){ b.setAttribute('aria-live','polite'); });
 $('clsRow').addEventListener('click', function(e){ var b=e.target.closest('button'); if(b) setClass(b.dataset.cls); });
 $('modeRow').addEventListener('click', function(e){ var b=e.target.closest('button'); if(b) setMode(b.dataset.mode); });
+$('locRow').addEventListener('click', function(e){ var b=e.target.closest('button'); if(b) setLoc(b.dataset.loc); });
+if($('solRow')) $('solRow').addEventListener('click', function(e){ var b=e.target.closest('button'); if(b){ $('sol').value = b.dataset.sol; calc(); } });
 $('reset').addEventListener('click', function(){
   var b=$('reset');
   if(b.dataset.arm!=='1'){
@@ -605,8 +700,8 @@ $('reset').addEventListener('click', function(){
   }
   b.dataset.arm=''; b.textContent='сбросить всё';
   INPUTS.forEach(function(id){ $(id).value=''; });
-  state.cls='econom'; state.mode='A';
-  pressRow('clsRow','cls','econom'); setMode('A'); refreshPlaceholders();
+  state.cls='econom'; state.mode='A'; state.loc='mimo';
+  pressRow('clsRow','cls','econom'); pressRow('locRow','loc','mimo'); setMode('A'); refreshPlaceholders();
   try{ history.replaceState(null,'', location.pathname); }catch(e){}
   calc();
 });
@@ -616,6 +711,7 @@ document.addEventListener('click', function(e){
   var w = e.target.closest('.inp');
   if(w && e.target.tagName!=='INPUT') w.querySelector('input').focus();
   if(e.target.closest('.gochk')) goChk();
+  if(e.target.closest('.gosol')){ $('sol').scrollIntoView({block:'center',behavior:'smooth'}); $('sol').focus({preventScroll:true}); }
 });
 function goChk(){
   var b=$('chkField');
