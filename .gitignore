@@ -1,0 +1,7 @@
+.DS_Store
+~$*
+vpc-site-bureau.zip
+*.zip
+push.sh
+.gstack/
+.claude/worktrees/
