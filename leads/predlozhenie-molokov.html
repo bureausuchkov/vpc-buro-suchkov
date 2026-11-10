@@ -260,6 +260,40 @@ footer .h{color:var(--accent)}
 <noscript><div><img src="https://mc.yandex.ru/watch/111454361" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
 </head><body>
+<!-- Шторка с PIN: КП открывает только тот, кому менеджер прислал код. Код и ключ те же, что у главной
+     marketing.bureausuchkov.com: введенный раз, он открывает все страницы сайта в этом браузере.
+     Это защита от случайных людей, а не от того, кто полезет в код: страница лежит в публичном репозитории. -->
+<div id="bsGate" style="position:fixed;inset:0;z-index:2147483000;background:#fff;color:#000;display:flex;align-items:center;justify-content:center;padding:24px">
+  <form id="bsGateForm" style="text-align:center;max-width:320px;width:100%">
+    <svg width="44" height="44" viewBox="0 0 60 60" aria-hidden="true" style="display:block;margin:0 auto"><path d="M 0 0 L 0 17.078 C 0.639 17.793 1.392 18.357 2.182 18.846 C 8.652 22.533 26.52 18.245 37.467 15.085 L 0 40.213 L 0 60 L 19.787 60 L 44.915 22.533 C 41.718 33.48 37.467 51.348 41.154 57.818 C 41.605 58.646 42.207 59.398 42.922 60 L 60 60 L 60 0 L 0 0 Z" fill="#171AD9"/></svg>
+    <div style="font-size:22px;font-weight:500;letter-spacing:-.03em;margin:14px 0 6px">Бюро Сучкова</div>
+    <div style="font-size:14px;line-height:1.4;color:rgba(0,0,0,.6);margin-bottom:18px;text-wrap:balance">Персональное предложение. Введите PIN&#8209;код из сообщения менеджера</div>
+    <input id="bsGatePin" type="password" inputmode="numeric" autocomplete="off" aria-label="PIN-код" placeholder="PIN" style="box-sizing:border-box;width:100%;font:inherit;font-size:18px;text-align:center;letter-spacing:4px;padding:13px 16px;border:none;border-radius:14px;background:#F0F0F0;color:#000">
+    <button type="submit" style="box-sizing:border-box;width:100%;font:inherit;font-size:15px;font-weight:500;margin-top:10px;padding:13px 16px;border:none;border-radius:14px;background:#171AD9;color:#fff;cursor:pointer">Открыть</button>
+    <div id="bsGateErr" role="alert" style="min-height:18px;font-size:13px;color:#FC5741;margin-top:10px"></div>
+  </form>
+</div>
+<script>
+(function(){
+  var KEY='bsGate2026', gate=document.getElementById('bsGate');
+  try{ if(localStorage.getItem(KEY)==='ok'){gate.remove();return;} }catch(e){}
+  document.body.style.overflow='hidden';
+  var HASH='55fbbb9de6c380e13013f7f7621cfafdc939fe87c1b0af1cc425aa18f3744dec';
+  var form=document.getElementById('bsGateForm'), pin=document.getElementById('bsGatePin'), err=document.getElementById('bsGateErr');
+  setTimeout(function(){pin.focus();},0);
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var v=pin.value.trim();
+    if(!v) return;
+    crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)).then(function(b){
+      var hex=Array.prototype.map.call(new Uint8Array(b),function(x){return x.toString(16).padStart(2,'0')}).join('');
+      if(hex===HASH){try{localStorage.setItem(KEY,'ok')}catch(e){} document.body.style.overflow='';gate.remove();}
+      else{err.textContent='Неверный PIN, попробуйте еще раз';pin.value='';pin.focus();}
+    });
+  });
+})();
+</script>
+
 <div class="wrap">
 <header class="top">
     <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><path d="M 0 0 L 0 17.078 C 0.639 17.793 1.392 18.357 2.182 18.846 C 8.652 22.533 26.52 18.245 37.467 15.085 L 0 40.213 L 0 60 L 19.787 60 L 44.915 22.533 C 41.718 33.48 37.467 51.348 41.154 57.818 C 41.605 58.646 42.207 59.398 42.922 60 L 60 60 L 60 0 L 0 0 Z" fill="#2F32F2"/></svg>
